@@ -1,1 +1,49 @@
+name: Deploy to EC2
 
+on:
+  push:
+    branches:
+      - main  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout des Repository-Codes
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Installiere Node.js und baue die Anwendung
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'  
+
+      - name: Install dependencies and build project
+        run: |
+          npm install
+          npm run build
+
+      # 3. Kopiere die gebauten Dateien auf die EC2-Instanz
+      - name: Copy build files to EC2
+        uses: appleboy/scp-action@v0.1.2
+        with:
+          host: ${{ secrets.EC2_HOST }}  
+          username: ${{ secrets.USER_NAME }} 
+          key: ${{ secrets.EC2_KEY }}  
+          source: "./build/*"  
+          target: "/home/${{ secrets.USER_NAME }}/build"  
+
+      # 4. Führe die Befehle auf der EC2-Instanz aus, um den Server zu starten
+      - name: Start application on EC2
+        uses: appleboy/ssh-action@v0.1.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.USER_NAME }}  
+          key: ${{ secrets.EC2_KEY }}  
+          script: |
+            sudo yum update -y
+            sudo yum install -y nodejs
+            sudo npm install -g serve
+            sudo serve -l 80 -s /home/${{ secrets.USER_NAME }}/build
