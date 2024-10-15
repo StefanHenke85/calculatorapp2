@@ -46,6 +46,6 @@ jobs:
           script: |
             sudo yum update -y
             sudo yum upgrade -y
-            sudo yum install -y nodejs
+            
             sudo npm install -g -y serve 
             sudo serve -l 80 -s /home/${{ secrets.USER_NAME }}/build
