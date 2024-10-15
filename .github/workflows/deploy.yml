@@ -31,7 +31,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}  
           username: ${{ secrets.USER_NAME }} 
-          key: ${{ secrets.EC2_KEY }}  
+          key: ${{ secrets.SSH_KEY }}  
           source: "./build/*"  
           target: "/home/${{ secrets.USER_NAME }}/build"  
 
@@ -41,7 +41,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.USER_NAME }}  
-          key: ${{ secrets.EC2_KEY }}  
+          key: ${{ secrets.SSH_KEY }}  
           script: |
             sudo yum update -y
             sudo yum install -y nodejs
