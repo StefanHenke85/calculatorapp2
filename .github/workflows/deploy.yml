@@ -14,11 +14,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      # 2. Installiere Node.js und baue die Anwendung
+      # 2. Installiere Node.js (Node 20 oder eine andere Version)
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'  
+          node-version: '20'  # Hier wird explizit Node.js 20 angegeben
 
       - name: Install dependencies and build project
         run: |
