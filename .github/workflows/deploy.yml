@@ -27,7 +27,7 @@ jobs:
 
       # 3. Kopiere die gebauten Dateien auf die EC2-Instanz
       - name: Copy build files to EC2
-        uses: appleboy/scp-action@v0.1.2
+        uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.EC2_IP }}  
           username: ${{ secrets.USER_NAME }} 
