@@ -34,6 +34,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}  
           source: "./build/*"  
           target: "/home/${{ secrets.USER_NAME }}/build"  
+          debug: true
 
       # 4. Führe die Befehle auf der EC2-Instanz aus, um den Server zu starten
       - name: Start application on EC2
