@@ -1,74 +1,52 @@
-name: Deploy to EC2
+name: Deploy on EC2
 
-on:
-  push:
-    branches:
-      - main  
+on: push
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout des Repository-Codes
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v2
 
-      # 2. Installiere Node.js (Node 20 oder eine andere Version)
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '14'  # Hier wird explizit Node.js 14 angegeben
-
-      - name: Install dependencies and build project
+      - name: Build Docker Image
         run: |
-          npm install
-          npm run build
+          docker build -t "${{ secrets.DOCKERHUB_USERNAME }}"/calculatorapp:latest .
+      
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-      # 3. Kopiere die gebauten Dateien auf die EC2-Instanz
-      - name: Copy build files to EC2
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.EC2_IP }}  
-          username: ${{ secrets.USER_NAME }} 
-          key: ${{ secrets.SSH_KEY }}  
-          source: "./build/*"  
-          target: "/home/${{ secrets.USER_NAME }}/build"  
-          debug: true
+      - name: Docker push
+        run: |
+          docker push "${{ secrets.DOCKERHUB_USERNAME }}"/calculatorapp:latest
 
-      # 4. Führe Befehle auf der EC2-Instanz aus, um sicherzustellen, dass Docker installiert ist und den bestehenden Container stoppt.
-      - name: Set up Docker and stop old container
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_IP }}
-          username: ${{ secrets.USER_NAME }}  
-          key: ${{ secrets.SSH_KEY }}  
-          script: |
-            # Aktualisiere EC2-Instanz
-            sudo yum update -y
-            sudo yum upgrade -y
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY}}" > ~/.ssh/meinPrivateKey
+          chmod 600 ~/.ssh/meinPrivateKey
+          ssh-keyscan -H ${{secrets.EC2_IP}} >> ~/.ssh/known_hosts
 
-            # Installiere Docker, falls es nicht installiert ist
-            if ! command -v docker &> /dev/null
-            then
-              curl -fsSL https://get.docker.com -o get-docker.sh
-              sudo sh get-docker.sh
+      - name: SSH Connection to EC2
+        run: |
+          ssh -i ~/.ssh/meinPrivateKey ec2-user@${{ secrets.EC2_IP }} << 'ENDSSH'    
+              sudo yum update -y
+              sudo yum upgrade -y
+              sudo yum install docker -y
+              sudo systemctl enable docker.service
               sudo systemctl start docker
-              sudo systemctl enable docker
-            fi
+              sudo usermod -aG docker ec2-user
+              sudo docker pull "${{ secrets.DOCKERHUB_USERNAME }}"/calculatorapp:latest
+          ENDSSH
 
-            # Stoppe und entferne den alten Docker-Container, falls er läuft
-            if [ $(sudo docker ps -q --filter "name=calculatorapp") ]; then
-              sudo docker stop calculatorapp
-              sudo docker rm calculatorapp
-            fi
 
-      # 5. Docker Container starten
       - name: Start Docker Container on EC2 instance
         run: |
-          ssh -i ~/.ssh/meinPrivateKey ec2-user@${{ secrets.EC2_IP }} << 'ENDSSH'
-          docker run -d -p 80:3000 --name calculatorapp "${{ secrets.USER_NAME }}"/calculatorapp:latest
-          ENDSSH
-            
+            ssh -i ~/.ssh/meinPrivateKey ec2-user@${{ secrets.EC2_IP }} << 'ENDSSH'
+                docker run -d -p 80:3000 --name calculatorapp "${{ secrets.DOCKERHUB_USERNAME }}"/calculatorapp:latest
+            ENDSSH
 
-           
+      - name: Clean Up SSH Key File (optional)
+        run: |
+          rm meinPrivateKey
