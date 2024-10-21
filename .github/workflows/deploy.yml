@@ -64,15 +64,11 @@ jobs:
             fi
 
       # 5. Docker Container starten
-      - name: Run Docker container on EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_IP }}
-          username: ${{ secrets.USER_NAME }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            # Starte Docker-Container auf Port 80
-            sudo docker run -d --name calculatorapp -p 80:80 -v /home/${{ secrets.USER_NAME }}/build:/usr/share/nginx/html nginx
+      - name: Start Docker Container on EC2 instance
+        run: |
+          ssh -i ~/.ssh/meinPrivateKey ec2-user@${{ secrets.EC2_IP }} << 'ENDSSH'
+          docker run -d -p 80:3000 --name calculatorapp "${{ secrets.USER_NAME }}"/calculatorapp:latest
+          ENDSSH
+            
 
-            # Sicherstellen, dass der Container läuft
-            sudo docker ps -a
+           
